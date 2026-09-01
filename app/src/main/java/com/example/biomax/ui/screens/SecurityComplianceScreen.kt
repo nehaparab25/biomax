@@ -2,6 +2,7 @@ package com.example.biomax.ui.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,6 +10,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,7 +25,6 @@ import androidx.compose.ui.unit.sp
 import com.example.biomax.model.AuditLog
 import com.example.biomax.model.UserAccount
 import com.example.biomax.security.SecurityCryptoManager
-import com.example.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -50,241 +51,217 @@ fun SecurityComplianceScreen(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 14.dp)
+            .background(MaterialTheme.colorScheme.background)
+            .padding(horizontal = 16.dp)
             .testTag("security_compliance_screen"),
         verticalArrangement = Arrangement.spacedBy(14.dp),
-        contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp)
+        contentPadding = PaddingValues(top = 8.dp, bottom = 96.dp)
     ) {
-        // Section: MFA Status & Fast Challenge Trigger
+        // Section: Cryptographic Security Badge & MFA status
         item {
             Card(
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(14.dp)) {
+                Column(modifier = Modifier.padding(16.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Surface(
-                                shape = CircleShape,
-                                color = BioGreenPrimary.copy(alpha = 0.15f),
-                                modifier = Modifier.size(36.dp)
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Default.VpnKey, contentDescription = null, tint = BioGreenPrimary, modifier = Modifier.padding(8.dp))
+                                Icon(Icons.Default.VpnKey, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                             }
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
-                                Text("Multi-Factor Authentication", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                Text("FIPS 140-3 Hardware Token / TOTP 6-Digit PIN", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("Multi-Factor & FIPS 140-3 Cryptography", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                                Text("Hardware Token & TOTP 6-Digit PIN", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
 
-                        Surface(shape = RoundedCornerShape(6.dp), color = StatusSettled.copy(alpha = 0.2f)) {
-                            Text("ACTIVE", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = StatusSettled, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(MaterialTheme.colorScheme.primaryContainer)
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text("ACTIVE", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     Button(
                         onClick = onOpenMfaChallenge,
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = BioGreenDark),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("trigger_mfa_challenge_button")
                     ) {
-                        Icon(Icons.Default.VerifiedUser, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Security, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Verify MFA Authentication Challenge", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text("Launch Security Token & Key Inspector", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
         }
 
-        // Section: End-to-End Encryption Specification
+        // Section: Encryption Protocols & Standards
         item {
             Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = BioGreenDark.copy(alpha = 0.12f)),
-                border = BorderStroke(1.dp, BioGreenDark.copy(alpha = 0.35f)),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Lock, contentDescription = null, tint = BioGreenDark, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("End-to-End Cryptography Engine", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = BioGreenDark)
-                        }
-                        Surface(shape = RoundedCornerShape(6.dp), color = StatusSettled.copy(alpha = 0.2f)) {
-                            Text("ENCRYPTED", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = StatusSettled, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
-                        }
-                    }
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Cryptographic Key Specifications", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("• Cipher Suite: ${secInfo.cipherSuite}", fontSize = 11.sp, fontFamily = FontFamily.Monospace)
-                    Text("• Hardware Handshake: TLS 1.3 with Curve25519 Key Exchange", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("• Public Key Fingerprint: ${secInfo.keyFingerprint}", fontSize = 10.sp, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("• Compliance: ${secInfo.certificateStatus}", fontSize = 10.sp, color = BioGreenDark, fontWeight = FontWeight.SemiBold)
+                    CryptoSpecRow("Data Encryption Standard", secInfo.cipherSuite)
+                    CryptoSpecRow("Logistics Ledger Integrity", secInfo.keyFingerprint)
+                    CryptoSpecRow("Authentication Protocol", "TOTP (RFC 6238) / SHA-512")
+                    CryptoSpecRow("Regulatory Compliance", secInfo.certificateStatus)
                 }
             }
         }
 
-        // Section: International Regulatory Compliance Grid
+        // Section: Searchable Audit Log
         item {
-            Text(
-                text = "GLOBAL REGULATORY COMPLIANCE LEDGER",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                ComplianceStandardCard(
-                    title = "EU RED II Directive (Renewable Energy)",
-                    standard = "Annex IX Part A - Food Scraps GHG Abatement Certified",
-                    status = "Certified (Level 1)",
-                    color = BioGreenPrimary
-                )
-                ComplianceStandardCard(
-                    title = "ISO 14001:2015 Environmental Standard",
-                    standard = "Audited Zero-Landfill Chain of Custody Protocol",
-                    status = "Verified Active",
-                    color = BioTealAccent
-                )
-                ComplianceStandardCard(
-                    title = "US EPA Renewable Fuel Standard (RFS)",
-                    standard = "D3 / D5 Renewable Identification Number (RIN) Generator",
-                    status = "Compliance Synchronized",
-                    color = BioAmberEnergy
-                )
-            }
-        }
-
-        // Section: Tamper-Proof Administrative Audit Log
-        item {
-            Spacer(modifier = Modifier.height(6.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "ADMINISTRATIVE AUDIT LOGGING (${auditLogs.size})",
+                    text = "IMMUTABLE AUDIT LOGS (${filteredLogs.size})",
                     fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.primary,
+                    letterSpacing = 0.8.sp
                 )
+                Text("Tamper-Evident SHA-256", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
             }
             Spacer(modifier = Modifier.height(6.dp))
 
             OutlinedTextField(
                 value = auditSearchQuery,
                 onValueChange = { auditSearchQuery = it },
-                placeholder = { Text("Filter audit trail by action or actor...", fontSize = 11.sp) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp),
-                singleLine = true
+                placeholder = { Text("Filter audit logs by action, user or transaction...", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)) },
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("audit_search_input")
             )
         }
 
-        items(filteredLogs) { log ->
-            Card(
-                shape = RoundedCornerShape(10.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(10.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = log.action,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = dateFormat.format(Date(log.timestamp)),
-                            fontSize = 9.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(3.dp))
-                    Text(
-                        text = log.entityAffected,
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "Actor: ${log.actorEmail} (${log.actorRole.name})",
-                            fontSize = 9.sp,
-                            color = BioTealAccent
-                        )
-                        Text(
-                            text = "Sig: ${log.securitySignature}",
-                            fontSize = 9.sp,
-                            fontFamily = FontFamily.Monospace,
-                            color = BioGreenDark
-                        )
-                    }
-                }
-            }
+        items(filteredLogs, key = { it.id }) { log ->
+            AuditLogRowCard(log = log, dateFormat = dateFormat)
         }
     }
 }
 
 @Composable
-private fun ComplianceStandardCard(
-    title: String,
-    standard: String,
-    status: String,
-    color: Color
+private fun CryptoSpecRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.secondary, fontFamily = FontFamily.Monospace)
+    }
+}
+
+@Composable
+private fun AuditLogRowCard(
+    log: AuditLog,
+    dateFormat: SimpleDateFormat
 ) {
-    Surface(
+    Card(
         shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(title, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                Text(standard, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Surface(shape = RoundedCornerShape(6.dp), color = color.copy(alpha = 0.15f)) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = log.action,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
                 Text(
-                    text = status,
+                    text = dateFormat.format(Date(log.timestamp)),
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = log.entityAffected,
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "${log.actorEmail} (${log.actorRole})",
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "Sig: ${log.securitySignature.take(12)}...",
                     fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = color,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.secondary
                 )
             }
         }

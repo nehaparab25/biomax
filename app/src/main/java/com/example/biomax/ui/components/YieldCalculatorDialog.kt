@@ -1,9 +1,11 @@
 package com.example.biomax.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -22,7 +24,6 @@ import androidx.compose.ui.window.Dialog
 import com.example.biomax.localization.LocalizationManager
 import com.example.biomax.model.CurrencyUnit
 import com.example.biomax.model.FeedstockCategory
-import com.example.ui.theme.*
 
 @Composable
 fun YieldCalculatorDialog(
@@ -30,25 +31,24 @@ fun YieldCalculatorDialog(
     onDismiss: () -> Unit
 ) {
     var selectedCategory by remember { mutableStateOf(FeedstockCategory.COOKED_KITCHEN_SCRAPS) }
-    var weightKg by remember { mutableStateOf(500f) }
-    var moisturePercent by remember { mutableStateOf(65f) }
+    var weightKg by remember { mutableFloatStateOf(650f) }
+    var moisturePercent by remember { mutableFloatStateOf(65f) }
+    var sliderStyle by remember { mutableStateOf(SliderStyle.FLUID_GLOW) }
 
-    // Calculated Energy Yields
     val methaneM3 = (weightKg / 1000.0) * selectedCategory.typicalMethaneYieldM3PerTon * (1.0 - ((moisturePercent - 60f) * 0.005))
     val electricalKwh = weightKg * selectedCategory.calorificKwhPerKg * (1.0 - ((moisturePercent - 60f) * 0.004))
-    val homesPoweredDays = electricalKwh / 30.0 // Average home uses ~30 kWh/day
+    val homesPoweredDays = electricalKwh / 30.0
     val co2AbatedKg = weightKg * 1.18
     val estimatedEconomicValue = (weightKg * 0.08) + (electricalKwh * 0.12)
 
     Dialog(onDismissRequest = onDismiss) {
-        Card(
+        GlassmorphicSurface(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 16.dp)
+                .padding(vertical = 12.dp)
                 .testTag("yield_calculator_dialog"),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+            borderGlowColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
         ) {
             Column(
                 modifier = Modifier
@@ -56,225 +56,161 @@ fun YieldCalculatorDialog(
                     .padding(20.dp)
                     .verticalScroll(rememberScrollState())
             ) {
-                // Header
+                // Header Row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = BioGreenDark.copy(alpha = 0.15f),
-                            modifier = Modifier.size(36.dp)
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Calculate,
                                 contentDescription = null,
-                                tint = BioGreenDark,
-                                modifier = Modifier.padding(8.dp)
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                         Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                text = "Biogas Yield Simulator",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp
-                            )
-                            Text(
-                                text = "Feedstock to Clean Energy Conversion",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        Text(
+                            text = "Yield Estimator",
+                            fontWeight = FontWeight.Black,
+                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     }
 
-                    IconButton(onClick = onDismiss) {
-                        Icon(imageVector = Icons.Default.Close, contentDescription = "Close")
+                    // Style Switcher (Fluid vs Solid Bar)
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .padding(2.dp)
+                    ) {
+                        IconButton(
+                            onClick = { sliderStyle = SliderStyle.FLUID_GLOW },
+                            modifier = Modifier.size(26.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.LinearScale,
+                                contentDescription = "Fluid Slider Mode",
+                                tint = if (sliderStyle == SliderStyle.FLUID_GLOW) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                        IconButton(
+                            onClick = { sliderStyle = SliderStyle.SOLID_BAR },
+                            modifier = Modifier.size(26.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.HorizontalRule,
+                                contentDescription = "Solid Bar Mode",
+                                tint = if (sliderStyle == SliderStyle.SOLID_BAR) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Select Feedstock Category
-                Text(
-                    text = "Feedstock Type",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-
-                var expandedCategory by remember { mutableStateOf(false) }
-                Box {
-                    OutlinedButton(
-                        onClick = { expandedCategory = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = selectedCategory.displayName,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-                        }
-                    }
-
-                    DropdownMenu(
-                        expanded = expandedCategory,
-                        onDismissRequest = { expandedCategory = false }
-                    ) {
-                        FeedstockCategory.values().forEach { cat ->
-                            DropdownMenuItem(
-                                text = {
-                                    Column {
-                                        Text(cat.displayName, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                        Text(
-                                            "Yield: ~${cat.typicalMethaneYieldM3PerTon.toInt()} m³ CH₄ / Ton",
-                                            fontSize = 11.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                },
-                                onClick = {
-                                    selectedCategory = cat
-                                    expandedCategory = false
-                                }
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Weight Slider
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Batch Weight",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp
-                    )
-                    Text(
-                        text = "${weightKg.toInt()} kg (${String.format("%.2f", weightKg / 1000f)} Tons)",
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 12.sp,
-                        color = BioGreenDark
-                    )
-                }
-                Slider(
+                // Interactive Fluid Sliders
+                FluidSlider(
                     value = weightKg,
                     onValueChange = { weightKg = it },
-                    valueRange = 50f..5000f,
-                    steps = 99,
-                    colors = SliderDefaults.colors(
-                        thumbColor = BioGreenPrimary,
-                        activeTrackColor = BioGreenPrimary
-                    )
+                    valueRange = 50f..3000f,
+                    label = "Organic Feedstock Volume",
+                    valueDisplay = "${weightKg.toInt()}",
+                    unit = "kg",
+                    sliderStyle = sliderStyle,
+                    accentColor = MaterialTheme.colorScheme.primary
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                // Moisture Slider
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Moisture Content",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp
-                    )
-                    Text(
-                        text = "${moisturePercent.toInt()}%",
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 12.sp,
-                        color = BioTealAccent
-                    )
-                }
-                Slider(
+                FluidSlider(
                     value = moisturePercent,
                     onValueChange = { moisturePercent = it },
-                    valueRange = 10f..90f,
-                    steps = 79,
-                    colors = SliderDefaults.colors(
-                        thumbColor = BioTealAccent,
-                        activeTrackColor = BioTealAccent
-                    )
+                    valueRange = 30f..95f,
+                    label = "Moisture Content",
+                    valueDisplay = "${moisturePercent.toInt()}",
+                    unit = "%",
+                    sliderStyle = sliderStyle,
+                    accentColor = MaterialTheme.colorScheme.secondary
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Yield Output Results Box
+                // Minimalist Fluid Yield Outputs Strip
                 Text(
-                    text = "ESTIMATED RENEWABLE OUTPUTS",
+                    text = "ESTIMATED GENERATION OUTPUT",
+                    fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.primary,
+                    letterSpacing = 0.8.sp
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
-                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
-                        .padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    ResultOutputRow(
-                        label = "Biogas Methane (CH₄)",
-                        value = "${String.format("%.1f", methaneM3)} m³",
+                    MinimalResultRow(
                         icon = Icons.Default.LocalFireDepartment,
-                        tint = BioAmberEnergy
+                        label = "Methane Potential",
+                        value = "${String.format("%.1f", methaneM3)} m³ CH₄",
+                        color = MaterialTheme.colorScheme.tertiary
                     )
-                    ResultOutputRow(
-                        label = "Clean Electricity Output",
-                        value = "${String.format("%.0f", electricalKwh)} kWh (${String.format("%.3f", electricalKwh / 1000.0)} MWh)",
+
+                    MinimalResultRow(
                         icon = Icons.Default.Bolt,
-                        tint = BioGreenPrimary
+                        label = "Electrical Energy",
+                        value = "${electricalKwh.toInt()} kWh",
+                        color = MaterialTheme.colorScheme.primary
                     )
-                    ResultOutputRow(
-                        label = "Home Power Equivalent",
-                        value = "${String.format("%.1f", homesPoweredDays)} Days of 1-Home Electricity",
+
+                    MinimalResultRow(
                         icon = Icons.Default.Home,
-                        tint = BioTealAccent
+                        label = "Home Power Days",
+                        value = "${String.format("%.1f", homesPoweredDays)} Days",
+                        color = MaterialTheme.colorScheme.secondary
                     )
-                    ResultOutputRow(
-                        label = "CO₂ Landfill Emissions Prevented",
-                        value = "${String.format("%.0f", co2AbatedKg)} kg CO₂e",
-                        icon = Icons.Default.Forest,
-                        tint = BioGreenDark
+
+                    MinimalResultRow(
+                        icon = Icons.Default.Park,
+                        label = "CO₂ Abatement",
+                        value = "${co2AbatedKg.toInt()} kg",
+                        color = MaterialTheme.colorScheme.primary
                     )
-                    ResultOutputRow(
-                        label = "Combined Economic Value",
+
+                    MinimalResultRow(
+                        icon = Icons.Default.MonetizationOn,
+                        label = "Estimated Value",
                         value = LocalizationManager.formatPrice(estimatedEconomicValue, currentCurrency),
-                        icon = Icons.Default.AccountBalanceWallet,
-                        tint = BioAmberEnergy
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
                 Button(
                     onClick = onDismiss,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = BioGreenPrimary),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(44.dp)
+                        .height(44.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
                 ) {
-                    Text("Apply Yield Parameters", fontWeight = FontWeight.Bold)
+                    Text("Apply & Return", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
             }
         }
@@ -282,39 +218,26 @@ fun YieldCalculatorDialog(
 }
 
 @Composable
-private fun ResultOutputRow(
+private fun MinimalResultRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     value: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    tint: Color
+    color: Color
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .padding(horizontal = 10.dp, vertical = 7.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = tint,
-                modifier = Modifier.size(16.dp)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = label,
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(label, fontSize = 11.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Text(
-            text = value,
-            fontWeight = FontWeight.ExtraBold,
-            fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+        Text(value, fontSize = 12.sp, fontWeight = FontWeight.Black, color = color)
     }
 }

@@ -1,6 +1,7 @@
 package com.example.biomax.ui.screens
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -8,18 +9,21 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.biomax.localization.LocalizationManager
 import com.example.biomax.model.*
-import com.example.ui.theme.*
+import com.example.biomax.ui.components.FluidCapsuleBadge
+import com.example.biomax.ui.components.FluidMetricGlyph
+import com.example.biomax.ui.components.GlassmorphicSurface
 
 @Composable
 fun RestaurantScreen(
@@ -42,17 +46,17 @@ fun RestaurantScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 14.dp)
             .testTag("restaurant_screen")
     ) {
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
-        // Top Restaurant Earnings & Bins Summary Card
-        Card(
+        // Fluid Inventory Control Bar
+        GlassmorphicSurface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+            shape = RoundedCornerShape(18.dp),
+            borderGlowColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
                 Row(
@@ -60,174 +64,124 @@ fun RestaurantScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Restaurant Food Waste Management",
+                            text = user?.organizationName ?: "Commercial Kitchen",
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = user?.organizationName ?: "Grand Bistro & Rotisserie",
-                            fontSize = 12.sp,
-                            color = BioGreenDark,
+                            text = "Organic Waste Dispatch Console",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
 
-                    // Post Lot FAB / Button
                     Button(
                         onClick = onOpenPostLot,
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = BioGreenPrimary),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
                         modifier = Modifier.testTag("fab_post_waste_lot")
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(15.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Post Waste Lot", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("Post Lot", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                // Stats row
+                // Fluid Summary Metric Pills
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    MetricMiniBox(
-                        title = "In Escrow",
-                        value = LocalizationManager.formatPrice(totalPendingEscrow, currentCurrency),
+                    FluidMetricGlyph(
                         icon = Icons.Default.Lock,
-                        tint = StatusInEscrow,
+                        value = LocalizationManager.formatPrice(totalPendingEscrow, currentCurrency),
+                        accentColor = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.weight(1f)
                     )
-                    MetricMiniBox(
-                        title = "Settled Earnings",
+                    FluidMetricGlyph(
+                        icon = Icons.Default.AccountBalanceWallet,
                         value = LocalizationManager.formatPrice(totalSettledEarnings, currentCurrency),
-                        icon = Icons.Default.CheckCircle,
-                        tint = StatusSettled,
+                        accentColor = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f)
                     )
-                    MetricMiniBox(
-                        title = "Active Bins",
-                        value = "${activeAvailable.size} Lots",
-                        icon = Icons.Default.Inventory2,
-                        tint = BioAmberEnergy,
-                        modifier = Modifier.weight(1f)
+                    FluidMetricGlyph(
+                        icon = Icons.Default.CheckCircle,
+                        value = "${activeAvailable.size} Live",
+                        accentColor = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.weight(0.9f)
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
-        Text(
-            text = "YOUR ACTIVE KITCHEN WASTE LOTS (${myRestaurantListings.size})",
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        if (myRestaurantListings.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Default.AddCircleOutline,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(44.dp)
+        // Kitchen Postings Stream
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(top = 2.dp, bottom = 96.dp)
+        ) {
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "POSTED LOTS (${myRestaurantListings.size})",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 0.8.sp
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("No active waste lots listed.", fontWeight = FontWeight.Bold)
-                    Text("Tap '+ Post Waste Lot' above to sell food scraps.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = "${inTransitOrReserved.size} in transit",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 10.sp
+                    )
                 }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                contentPadding = PaddingValues(bottom = 80.dp)
-            ) {
-                items(myRestaurantListings, key = { it.id }) { listing ->
-                    Card(
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
-                        modifier = Modifier.fillMaxWidth()
+
+            if (myRestaurantListings.isEmpty()) {
+                item {
+                    GlassmorphicSurface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp)
                     ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = listing.title,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp
-                                )
-
-                                Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = if (listing.isReserved) BioAmberEnergy.copy(alpha = 0.2f) else BioGreenPrimary.copy(alpha = 0.2f)
-                                ) {
-                                    Text(
-                                        text = if (listing.isReserved) "PROCURED & IN ESCROW" else "AVAILABLE ON MARKET",
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (listing.isReserved) BioAmberEnergy else BioGreenDark,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(6.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = "Weight: ${listing.weightKg.toInt()} kg (${listing.category.displayName})",
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    text = if (listing.isFreePickup) "FREE ESG PICKUP" else LocalizationManager.formatPrice(listing.weightKg * listing.pricePerKg, currentCurrency),
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = BioGreenDark
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = "Energy Potential: ${String.format("%.1f", listing.estimatedBiogasM3)} m³ CH₄ (~${String.format("%.0f", listing.estimatedKwh)} kWh)",
-                                    fontSize = 10.sp,
-                                    color = BioTealAccent,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Text(
-                                    text = "Storage: ${listing.storageType.title}",
-                                    fontSize = 10.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                Icons.Outlined.Inventory2,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(36.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("No waste scrap batches listed", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("Tap 'Post Lot' above to list kitchen scraps.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
                         }
                     }
+                }
+            } else {
+                items(myRestaurantListings, key = { it.id }) { item ->
+                    RestaurantListingRowCard(
+                        listing = item,
+                        currentCurrency = currentCurrency
+                    )
                 }
             }
         }
@@ -235,27 +189,72 @@ fun RestaurantScreen(
 }
 
 @Composable
-private fun MetricMiniBox(
-    title: String,
-    value: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    tint: Color,
-    modifier: Modifier = Modifier
+private fun RestaurantListingRowCard(
+    listing: WasteListing,
+    currentCurrency: CurrencyUnit
 ) {
-    Surface(
-        shape = RoundedCornerShape(10.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
-        modifier = modifier
+    GlassmorphicSurface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("restaurant_lot_row_${listing.id}"),
+        shape = RoundedCornerShape(16.dp),
+        borderGlowColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
     ) {
-        Column(modifier = Modifier.padding(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(12.dp))
-                Spacer(modifier = Modifier.width(3.dp))
-                Text(title, fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(if (listing.isReserved) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = listing.title,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.5.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                FluidCapsuleBadge(
+                    text = if (listing.isReserved) "EN ROUTE" else "AVAILABLE",
+                    color = if (listing.isReserved) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
+                )
             }
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(value, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                FluidMetricGlyph(
+                    icon = Icons.Default.Scale,
+                    value = "${listing.weightKg.toInt()}",
+                    unit = "kg",
+                    accentColor = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f)
+                )
+                FluidMetricGlyph(
+                    icon = Icons.Default.LocalFireDepartment,
+                    value = String.format("%.1f", listing.estimatedBiogasM3),
+                    unit = "m³",
+                    accentColor = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.weight(1f)
+                )
+                FluidMetricGlyph(
+                    icon = Icons.Default.MonetizationOn,
+                    value = if (listing.isFreePickup) "FREE" else LocalizationManager.formatPrice(listing.weightKg * listing.pricePerKg, currentCurrency),
+                    accentColor = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.weight(1.1f)
+                )
+            }
         }
     }
 }

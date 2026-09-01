@@ -51,6 +51,9 @@ interface BiomaxDao {
     @Query("DELETE FROM listings WHERE id = :id")
     suspend fun deleteListing(id: String)
 
+    @Query("DELETE FROM listings")
+    suspend fun deleteAllListings()
+
     // Orders & Logistics Transactions
     @Query("SELECT * FROM orders ORDER BY createdAt DESC")
     fun getAllOrders(): Flow<List<OrderTransaction>>
@@ -73,6 +76,9 @@ interface BiomaxDao {
     @Update
     suspend fun updateOrder(order: OrderTransaction)
 
+    @Query("DELETE FROM orders")
+    suspend fun deleteAllOrders()
+
     // Reviews
     @Query("SELECT * FROM reviews ORDER BY createdAt DESC")
     fun getAllReviews(): Flow<List<PartnerReview>>
@@ -82,6 +88,9 @@ interface BiomaxDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertReview(review: PartnerReview)
+
+    @Query("DELETE FROM reviews")
+    suspend fun deleteAllReviews()
 
     // System Alerts & Notifications
     @Query("SELECT * FROM system_alerts ORDER BY timestamp DESC")
@@ -96,10 +105,16 @@ interface BiomaxDao {
     @Query("UPDATE system_alerts SET isRead = 1")
     suspend fun markAllAlertsRead()
 
+    @Query("DELETE FROM system_alerts")
+    suspend fun deleteAllAlerts()
+
     // Audit Logs
     @Query("SELECT * FROM audit_logs ORDER BY timestamp DESC")
     fun getAllAuditLogs(): Flow<List<AuditLog>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAuditLog(log: AuditLog)
+
+    @Query("DELETE FROM audit_logs")
+    suspend fun deleteAllAuditLogs()
 }

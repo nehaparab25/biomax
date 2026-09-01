@@ -1,18 +1,18 @@
 package com.example.biomax.ui.components
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -20,20 +20,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.biomax.model.OrderTransaction
-import com.example.ui.theme.*
 
 @Composable
 fun RatingDialog(
-    order: OrderTransaction?,
+    order: OrderTransaction,
     onDismiss: () -> Unit,
     onSubmitRating: (overall: Int, purity: Int, moisture: Int, punctuality: Int, comment: String) -> Unit
 ) {
-    if (order == null) return
-
-    var overallRating by remember { mutableStateOf(5) }
-    var purityScore by remember { mutableStateOf(5) }
-    var moistureAccuracyScore by remember { mutableStateOf(5) }
-    var punctualityScore by remember { mutableStateOf(5) }
+    var overallRating by remember { mutableIntStateOf(5) }
+    var purityScore by remember { mutableIntStateOf(5) }
+    var moistureScore by remember { mutableIntStateOf(5) }
+    var punctualityScore by remember { mutableIntStateOf(5) }
     var comment by remember { mutableStateOf("") }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -41,16 +38,15 @@ fun RatingDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 16.dp)
-                .testTag("partner_rating_dialog"),
+                .testTag("rating_dialog"),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(20.dp)
-                    .verticalScroll(rememberScrollState())
             ) {
                 // Header
                 Row(
@@ -58,95 +54,87 @@ fun RatingDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
-                        Text(
-                            text = "Partner Quality Standards Review",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
-                        )
-                        Text(
-                            text = "Transaction: ${order.id}",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
+                    Text(
+                        text = "Partner Quality Review",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Overall Score Stars
                 Text(
-                    text = "Overall Partner Rating",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp
+                    text = "Order #${order.id} • ${order.restaurantName}",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.primary
                 )
-                Spacer(modifier = Modifier.height(6.dp))
-                StarRatingSelector(rating = overallRating, onRatingSelected = { overallRating = it })
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Feedstock Purity Score
-                RatingCategoryRow(
-                    title = "Feedstock Purity (Zero inorganic contaminants)",
-                    score = purityScore,
-                    onScoreSelected = { purityScore = it }
-                )
+                // Star Rating
+                Text("Overall Transaction Rating", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    (1..5).forEach { star ->
+                        IconButton(onClick = { overallRating = star }) {
+                            Icon(
+                                imageVector = if (star <= overallRating) Icons.Filled.Star else Icons.Filled.StarBorder,
+                                contentDescription = "$star Stars",
+                                tint = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    }
+                }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                // Moisture Accuracy Score
-                RatingCategoryRow(
-                    title = "Moisture & Spectrophotometer Accuracy",
-                    score = moistureAccuracyScore,
-                    onScoreSelected = { moistureAccuracyScore = it }
-                )
+                // Detailed Sub-Scores
+                ScoreSelectorRow("Organic Purity & Sort Quality", purityScore) { purityScore = it }
+                ScoreSelectorRow("Moisture Accuracy vs IoT", moistureScore) { moistureScore = it }
+                ScoreSelectorRow("Fleet Loading Punctuality", punctualityScore) { punctualityScore = it }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                // Logistics & Punctuality
-                RatingCategoryRow(
-                    title = "Logistics Punctuality & Packaging Sealed",
-                    score = punctualityScore,
-                    onScoreSelected = { punctualityScore = it }
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Written Feedback
                 OutlinedTextField(
                     value = comment,
                     onValueChange = { comment = it },
-                    label = { Text("Quality observations / Lab notes (Optional)") },
-                    placeholder = { Text("e.g. Excellent feedstock purity, zero plastics, ideal C:N ratio for digester.") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(100.dp)
-                        .testTag("rating_comment_input"),
-                    shape = RoundedCornerShape(12.dp)
+                    label = { Text("Quality Feedback Notes") },
+                    placeholder = { Text("e.g. Excellent purity, zero glass or plastic contaminants") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                    )
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Button(
                     onClick = {
-                        onSubmitRating(overallRating, purityScore, moistureAccuracyScore, punctualityScore, comment)
+                        onSubmitRating(overallRating, purityScore, moistureScore, punctualityScore, comment)
                     },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = BioAmberEnergy),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(44.dp)
-                        .testTag("submit_rating_button")
-                ) {
-                    Text(
-                        text = "Submit Verified Quality Review",
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        .height(48.dp)
+                        .testTag("submit_rating_btn"),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     )
+                ) {
+                    Text("Submit Verified Partner Review", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
             }
         }
@@ -154,42 +142,33 @@ fun RatingDialog(
 }
 
 @Composable
-private fun RatingCategoryRow(
-    title: String,
-    score: Int,
-    onScoreSelected: (Int) -> Unit
-) {
-    Column {
-        Text(
-            text = title,
-            fontSize = 11.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.Medium
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        StarRatingSelector(rating = score, onRatingSelected = onScoreSelected, starSize = 22)
-    }
-}
-
-@Composable
-fun StarRatingSelector(
-    rating: Int,
-    onRatingSelected: (Int) -> Unit,
-    starSize: Int = 30
-) {
+private fun ScoreSelectorRow(label: String, currentScore: Int, onScoreSelect: (Int) -> Unit) {
     Row(
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        for (i in 1..5) {
-            Icon(
-                imageVector = if (i <= rating) Icons.Filled.Star else Icons.Outlined.Star,
-                contentDescription = "$i Stars",
-                tint = if (i <= rating) BioAmberEnergy else MaterialTheme.colorScheme.outline,
-                modifier = Modifier
-                    .size(starSize.dp)
-                    .clickable { onRatingSelected(i) }
-            )
+        Text(label, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            (1..5).forEach { num ->
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(if (num == currentScore) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+                        .clickable { onScoreSelect(num) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = num.toString(),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (num == currentScore) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
 }

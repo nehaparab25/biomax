@@ -1,16 +1,17 @@
 package com.example.biomax.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,9 +23,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.biomax.model.AuditLog
 import com.example.biomax.security.SecurityCryptoManager
-import com.example.ui.theme.*
-import java.text.SimpleDateFormat
-import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,8 +32,9 @@ fun SecurityInspectorSheet(
     onToggleMfa: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val scrollState = rememberScrollState()
     val secInfo = SecurityCryptoManager.getEncryptionInfo()
-    val dateFormat = SimpleDateFormat("MMM dd, HH:mm:ss", Locale.getDefault())
+    val totpCode = remember { SecurityCryptoManager.generateTotpDemoCode() }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -48,6 +47,7 @@ fun SecurityInspectorSheet(
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 32.dp)
+                .verticalScroll(scrollState)
                 .testTag("security_inspector_sheet")
         ) {
             // Header
@@ -57,207 +57,115 @@ fun SecurityInspectorSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(
-                        shape = CircleShape,
-                        color = BioGreenDark.copy(alpha = 0.15f),
-                        modifier = Modifier.size(36.dp)
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.GppGood,
+                            Icons.Default.Security,
                             contentDescription = null,
-                            tint = BioGreenDark,
-                            modifier = Modifier.padding(6.dp)
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                     Spacer(modifier = Modifier.width(10.dp))
-                    Column {
-                        Text(
-                            text = "Security & Compliance Center",
-                            fontWeight = FontWeight.Black,
-                            fontSize = 17.sp,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "End-to-End Encryption & Administrative Audit Trail",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // E2E Encryption Status Card
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = BioGreenDark.copy(alpha = 0.1f),
-                border = androidx.compose.foundation.BorderStroke(1.dp, BioGreenDark.copy(alpha = 0.3f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Lock, contentDescription = null, tint = BioGreenDark, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Active Cipher Suite", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = BioGreenDark)
-                        }
-                        Surface(shape = RoundedCornerShape(6.dp), color = StatusSettled.copy(alpha = 0.2f)) {
-                            Text("FIPS 140-3 ACTIVE", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = StatusSettled, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(secInfo.cipherSuite, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text("RSA-4096 Fingerprint: ${secInfo.keyFingerprint}", fontSize = 10.sp, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // MFA Setting Row
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.VpnKey, contentDescription = null, tint = BioAmberEnergy, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Text("Multi-Factor Authentication", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                            Text("TOTP Authenticator & Biometric Passkey", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                    Switch(
-                        checked = mfaEnabled,
-                        onCheckedChange = { onToggleMfa() },
-                        colors = SwitchDefaults.colors(checkedThumbColor = BioGreenPrimary, checkedTrackColor = BioGreenLight.copy(alpha = 0.5f)),
-                        modifier = Modifier.testTag("toggle_mfa_switch")
+                    Text(
+                        text = "Security & Encryption Inspector",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(MaterialTheme.colorScheme.primaryContainer)
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text("FIPS 140-3", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Regulatory Standards & Badges
-            Text("INTERNATIONAL REGULATORY COMPLIANCE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(modifier = Modifier.height(6.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ComplianceBadge(title = "EU RED II", subtitle = "GHG Certified", icon = Icons.Default.Verified, modifier = Modifier.weight(1f))
-                ComplianceBadge(title = "ISO 14001", subtitle = "Eco Audit", icon = Icons.Default.EnergySavingsLeaf, modifier = Modifier.weight(1f))
-                ComplianceBadge(title = "EPA RFS", subtitle = "D3 RINs", icon = Icons.Default.Nature, modifier = Modifier.weight(1f))
+            // TOTP Live Token Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("LIVE SIMULATED HARDWARE TOTP KEY", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 1.sp)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = totpCode,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Black,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.primary,
+                        letterSpacing = 4.sp
+                    )
+                    Text("30s time-step algorithm (RFC 6238)", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Audit Trail Header
+            // MFA Toggle
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("ADMINISTRATIVE AUDIT TRAIL", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("${auditLogs.size} Tamper-Proof Records", fontSize = 10.sp, color = BioGreenDark, fontWeight = FontWeight.Bold)
+                Column {
+                    Text("Enforce Two-Factor Authentication", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+                    Text("Require hardware token or TOTP app upon login", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Switch(
+                    checked = mfaEnabled,
+                    onCheckedChange = { onToggleMfa() },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                    )
+                )
             }
 
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Technical Specs
+            Text("CRYPTOGRAPHIC SUBSYSTEM DETAILS", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, letterSpacing = 1.sp)
             Spacer(modifier = Modifier.height(6.dp))
 
-            // Audit Logs List
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 240.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                items(auditLogs) { log ->
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(8.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = log.action,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = dateFormat.format(Date(log.timestamp)),
-                                    fontSize = 9.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = log.entityAffected,
-                                fontSize = 10.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(3.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = "Actor: ${log.actorEmail}",
-                                    fontSize = 9.sp,
-                                    color = BioTealAccent
-                                )
-                                Text(
-                                    text = "Sig: ${log.securitySignature}",
-                                    fontSize = 9.sp,
-                                    fontFamily = FontFamily.Monospace,
-                                    color = BioGreenDark
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+            SecurityDetailRow("Cipher Suite", secInfo.cipherSuite)
+            SecurityDetailRow("RSA Key Fingerprint", secInfo.keyFingerprint)
+            SecurityDetailRow("Certificate Authority", secInfo.certificateStatus)
+            SecurityDetailRow("Hardware Enclave", secInfo.endToEndStatus)
         }
     }
 }
 
 @Composable
-private fun ComplianceBadge(
-    title: String,
-    subtitle: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        shape = RoundedCornerShape(10.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
-        modifier = modifier
+private fun SecurityDetailRow(key: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(
-            modifier = Modifier.padding(6.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(icon, contentDescription = null, tint = BioGreenPrimary, modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(title, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-            Text(subtitle, fontSize = 8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+        Text(key, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.secondary, fontFamily = FontFamily.Monospace)
     }
 }

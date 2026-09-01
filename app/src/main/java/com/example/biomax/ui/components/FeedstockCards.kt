@@ -1,8 +1,8 @@
 package com.example.biomax.ui.components
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,242 +20,150 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.biomax.localization.LocalizationManager
 import com.example.biomax.model.*
-import com.example.ui.theme.*
 
+/**
+ * Fluid Glassmorphic Feedstock & Waste Lot Cards
+ * Stripped of text overload in favor of clear iconography,
+ * fluid metric capsules, and sleek glassmorphic surfaces.
+ */
 @Composable
 fun FeedstockListingCard(
     listing: WasteListing,
     currentCurrency: CurrencyUnit,
-    currentLanguage: AppLanguage,
-    onProcureClick: () -> Unit,
+    onProcure: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val totalCost = listing.weightKg * listing.pricePerKg
 
-    Card(
+    GlassmorphicSurface(
         modifier = modifier
             .fillMaxWidth()
             .testTag("feedstock_card_${listing.id}"),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(20.dp),
+        borderGlowColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
-            // Top Row: Category tag + Distance + Freshness
+            // Top Row: Category Pill & Freshness Badge
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Category Tag
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = BioGreenDark.copy(alpha = 0.12f)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Eco,
-                            contentDescription = null,
-                            tint = BioGreenDark,
-                            modifier = Modifier.size(13.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = listing.category.displayName,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = BioGreenDark
-                        )
-                    }
+                FluidCapsuleBadge(
+                    text = listing.category.displayName,
+                    icon = Icons.Default.Eco,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                val badgeColor = when (listing.freshnessGrade) {
+                    FreshnessGrade.GRADE_A -> MaterialTheme.colorScheme.primary
+                    FreshnessGrade.GRADE_B -> MaterialTheme.colorScheme.tertiary
+                    FreshnessGrade.GRADE_C -> MaterialTheme.colorScheme.error
                 }
 
-                // Freshness & Expiry Badge
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = when (listing.freshnessGrade) {
-                        FreshnessGrade.GRADE_A -> BioGreenPrimary.copy(alpha = 0.15f)
-                        FreshnessGrade.GRADE_B -> BioAmberEnergy.copy(alpha = 0.15f)
-                        FreshnessGrade.GRADE_C -> BioOrangeUrgent.copy(alpha = 0.15f)
-                    }
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Timer,
-                            contentDescription = null,
-                            tint = when (listing.freshnessGrade) {
-                                FreshnessGrade.GRADE_A -> BioGreenPrimary
-                                FreshnessGrade.GRADE_B -> BioAmberEnergy
-                                FreshnessGrade.GRADE_C -> BioOrangeUrgent
-                            },
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "${listing.expiresHoursLeft}h left (${listing.freshnessGrade.name.replace("_", " ")})",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = when (listing.freshnessGrade) {
-                                FreshnessGrade.GRADE_A -> BioGreenPrimary
-                                FreshnessGrade.GRADE_B -> BioAmberEnergy
-                                FreshnessGrade.GRADE_C -> BioOrangeUrgent
-                            }
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Title & Restaurant name
-            Text(
-                text = listing.title,
-                fontWeight = FontWeight.Bold,
-                fontSize = 15.sp,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Storefront,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(13.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = listing.restaurantName,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Medium
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "• ${String.format("%.1f", listing.distanceKm)} km away",
-                    fontSize = 11.sp,
-                    color = BioTealAccent,
-                    fontWeight = FontWeight.SemiBold
+                FluidCapsuleBadge(
+                    text = "${listing.expiresHoursLeft}h • Grade ${listing.freshnessGrade.name.last()}",
+                    icon = Icons.Default.Timer,
+                    color = badgeColor
                 )
             }
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Biogas Energy Yield Meter Grid
+            // Title & Location Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = listing.title,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 2.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(
+                            text = "${listing.restaurantName} • ${listing.distanceKm} km",
+                            fontSize = 11.5.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Fluid Metrics Row with Icons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                FluidMetricGlyph(
+                    icon = Icons.Default.Scale,
+                    value = "${listing.weightKg.toInt()}",
+                    unit = "kg",
+                    accentColor = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f)
+                )
+                FluidMetricGlyph(
+                    icon = Icons.Default.LocalFireDepartment,
+                    value = String.format("%.1f", listing.estimatedBiogasM3),
+                    unit = "m³",
+                    accentColor = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.weight(1.1f)
+                )
+                FluidMetricGlyph(
+                    icon = Icons.Default.Bolt,
+                    value = "${listing.estimatedKwh.toInt()}",
+                    unit = "kWh",
+                    accentColor = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // IoT Sensor Telemetry Capsule
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(10.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                    .padding(8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                // Batch Weight
-                YieldMetricItem(
-                    label = "Batch Weight",
-                    value = LocalizationManager.formatWeight(listing.weightKg),
-                    icon = Icons.Default.Scale,
-                    tint = BioGreenDark
-                )
-
-                // Est Methane m3
-                YieldMetricItem(
-                    label = "Biogas Yield",
-                    value = "${String.format("%.1f", listing.estimatedBiogasM3)} m³ CH₄",
-                    icon = Icons.Default.LocalFireDepartment,
-                    tint = BioAmberEnergy
-                )
-
-                // Power Generation kWh
-                YieldMetricItem(
-                    label = "Clean Power",
-                    value = "${String.format("%.0f", listing.estimatedKwh)} kWh",
-                    icon = Icons.Default.Bolt,
-                    tint = BioTealAccent
-                )
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // IoT Telemetry Strip (Moisture %, Temp C, Storage container)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    .padding(horizontal = 10.dp, vertical = 5.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.WaterDrop,
-                        contentDescription = null,
-                        tint = BioTealAccent,
-                        modifier = Modifier.size(13.dp)
-                    )
-                    Spacer(modifier = Modifier.width(3.dp))
-                    Text(
-                        text = "${String.format("%.0f", listing.moisturePercent)}% Moisture",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    SensorPill(Icons.Default.WaterDrop, "${listing.moisturePercent}%")
+                    SensorPill(Icons.Default.Thermostat, "${listing.temperatureC}°C")
+                    SensorPill(Icons.Default.Science, "pH ${listing.phLevel}")
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Thermostat,
-                        contentDescription = null,
-                        tint = BioGreenPrimary,
-                        modifier = Modifier.size(13.dp)
-                    )
-                    Spacer(modifier = Modifier.width(3.dp))
-                    Text(
-                        text = "${String.format("%.1f", listing.temperatureC)}°C",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Inventory2,
-                        contentDescription = null,
-                        tint = BioAmberEnergy,
-                        modifier = Modifier.size(13.dp)
-                    )
-                    Spacer(modifier = Modifier.width(3.dp))
-                    Text(
-                        text = listing.storageType.title,
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1
-                    )
-                }
-            }
-
-            if (listing.notes.isNotBlank()) {
-                Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "“${listing.notes}”",
-                    fontSize = 11.sp,
-                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2
+                    text = listing.storageType.title.take(14),
+                    fontSize = 9.5.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-            Spacer(modifier = Modifier.height(10.dp))
 
-            // Bottom Action: Price & Escrow Lock Button
+            // Bottom Pricing & Procure Button
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -264,47 +172,35 @@ fun FeedstockListingCard(
                 Column {
                     Text(
                         text = if (listing.isFreePickup) "FREE PICKUP" else LocalizationManager.formatPrice(totalCost, currentCurrency),
-                        fontWeight = FontWeight.ExtraBold,
+                        color = if (listing.isFreePickup) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                         fontSize = 16.sp,
-                        color = if (listing.isFreePickup) BioGreenPrimary else MaterialTheme.colorScheme.onSurface
+                        fontWeight = FontWeight.Black
                     )
-                    if (!listing.isFreePickup) {
-                        Text(
-                            text = "${LocalizationManager.formatPrice(listing.pricePerKg, currentCurrency)} / kg",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    } else {
-                        Text(
-                            text = "+ Green ESG Credit",
-                            fontSize = 11.sp,
-                            color = BioGreenDark,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
+                    Text(
+                        text = if (listing.isFreePickup) "Community Feedstock" else "${LocalizationManager.formatPrice(listing.pricePerKg, currentCurrency)}/kg + Escrow",
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
                 Button(
-                    onClick = onProcureClick,
-                    enabled = !listing.isReserved,
+                    onClick = onProcure,
+                    modifier = Modifier
+                        .height(38.dp)
+                        .testTag("procure_lot_btn_${listing.id}"),
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = BioGreenPrimary,
-                        contentColor = Color.White
-                    ),
-                    modifier = Modifier.testTag("procure_button_${listing.id}")
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Lock,
+                        imageVector = Icons.Filled.ShoppingCartCheckout,
                         contentDescription = null,
                         modifier = Modifier.size(15.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = if (listing.isReserved) "Reserved" else LocalizationManager.getString("instant_buy", currentLanguage),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp
-                    )
+                    Text("Procure", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -312,32 +208,92 @@ fun FeedstockListingCard(
 }
 
 @Composable
-private fun YieldMetricItem(
-    label: String,
-    value: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    tint: Color
+fun WasteLotCard(
+    listing: WasteListing,
+    currentCurrency: CurrencyUnit,
+    onDelete: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = tint,
-                modifier = Modifier.size(12.dp)
-            )
-            Spacer(modifier = Modifier.width(3.dp))
+    GlassmorphicSurface(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("kitchen_lot_${listing.id}"),
+        shape = RoundedCornerShape(18.dp),
+        borderGlowColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                FluidCapsuleBadge(
+                    text = listing.category.displayName,
+                    icon = Icons.Default.Restaurant,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                FluidCapsuleBadge(
+                    text = if (listing.isReserved) "IN LOGISTICS" else "ACTIVE DISPATCH",
+                    icon = if (listing.isReserved) Icons.Default.LocalShipping else Icons.Default.CheckCircle,
+                    color = if (listing.isReserved) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             Text(
-                text = label,
-                fontSize = 9.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = listing.title,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
             )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                FluidMetricGlyph(
+                    icon = Icons.Default.Scale,
+                    value = "${listing.weightKg.toInt()}",
+                    unit = "kg",
+                    accentColor = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f)
+                )
+                FluidMetricGlyph(
+                    icon = Icons.Default.Bolt,
+                    value = "${listing.estimatedKwh.toInt()}",
+                    unit = "kWh",
+                    accentColor = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.weight(1f)
+                )
+                FluidMetricGlyph(
+                    icon = Icons.Default.MonetizationOn,
+                    value = if (listing.isFreePickup) "FREE" else LocalizationManager.formatPrice(listing.weightKg * listing.pricePerKg, currentCurrency),
+                    accentColor = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
-        Spacer(modifier = Modifier.height(2.dp))
+    }
+}
+
+@Composable
+private fun SensorPill(icon: androidx.compose.ui.graphics.vector.ImageVector, value: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(11.dp)
+        )
+        Spacer(modifier = Modifier.width(3.dp))
         Text(
             text = value,
-            fontWeight = FontWeight.Bold,
-            fontSize = 12.sp,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface
         )
     }

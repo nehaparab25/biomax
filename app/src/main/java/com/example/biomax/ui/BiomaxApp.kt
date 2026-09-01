@@ -1,14 +1,19 @@
 package com.example.biomax.ui
 
+import androidx.compose.animation.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -17,26 +22,14 @@ import com.example.biomax.model.*
 import com.example.biomax.ui.components.*
 import com.example.biomax.ui.screens.*
 import com.example.biomax.viewmodel.BiomaxViewModel
-import com.example.ui.theme.*
 import kotlinx.coroutines.launch
-
-enum class BiomaxNavigationTab(
-    val titleKey: String,
-    val iconFilled: androidx.compose.ui.graphics.vector.ImageVector,
-    val iconOutlined: androidx.compose.ui.graphics.vector.ImageVector
-) {
-    MARKETPLACE("nav_marketplace", Icons.Filled.Storefront, Icons.Outlined.Storefront),
-    RESTAURANT_LOTS("role_restaurant", Icons.Filled.Restaurant, Icons.Outlined.Restaurant),
-    LOGISTICS("nav_logistics", Icons.Filled.LocalShipping, Icons.Outlined.LocalShipping),
-    ANALYTICS("nav_analytics", Icons.Filled.BarChart, Icons.Outlined.BarChart),
-    SECURITY("nav_security", Icons.Filled.Shield, Icons.Outlined.Shield)
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BiomaxApp(
     viewModel: BiomaxViewModel
 ) {
+    val authState by viewModel.authState.collectAsStateWithLifecycle()
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
     val activeRole by viewModel.activeRole.collectAsStateWithLifecycle()
     val listings by viewModel.listings.collectAsStateWithLifecycle()
@@ -46,8 +39,11 @@ fun BiomaxApp(
     val auditLogs by viewModel.auditLogs.collectAsStateWithLifecycle()
     val currentLanguage by viewModel.currentLanguage.collectAsStateWithLifecycle()
     val currentCurrency by viewModel.currentCurrency.collectAsStateWithLifecycle()
+    val appSettings by viewModel.appSettings.collectAsStateWithLifecycle()
 
-    var selectedTab by remember { mutableStateOf(BiomaxNavigationTab.MARKETPLACE) }
+    val toastMessage by viewModel.toastMessage.collectAsStateWithLifecycle()
+
+    var selectedTab by remember { mutableIntStateOf(0) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategoryFilter by remember { mutableStateOf<FeedstockCategory?>(null) }
     var selectedGradeFilter by remember { mutableStateOf<FreshnessGrade?>(null) }
@@ -56,392 +52,524 @@ fun BiomaxApp(
     var showYieldCalcDialog by remember { mutableStateOf(false) }
     var showPostLotSheet by remember { mutableStateOf(false) }
     var showRatingDialogForOrder by remember { mutableStateOf<OrderTransaction?>(null) }
-    var showMfaDialog by remember { mutableStateOf(false) }
     var showSecuritySheet by remember { mutableStateOf(false) }
     var showNotificationsSheet by remember { mutableStateOf(false) }
+    var showSettingsModal by remember { mutableStateOf(false) }
 
-    // MFA input state
-    var mfaInputCode by remember { mutableStateOf("") }
-    var mfaErrorMessage by remember { mutableStateOf<String?>(null) }
-    val demoMfaCode = remember { viewModel.generateDemoMfaCode() }
-
-    val snackbarHostState = remember { SnackbarHostState() }
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    val unreadAlertsCount = alerts.count { !it.isRead }
+    // Handle toast messages
+    LaunchedEffect(toastMessage) {
+        toastMessage?.let { msg ->
+            snackbarHostState.showSnackbar(msg)
+            viewModel.clearToast()
+        }
+    }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 6.dp,
-                modifier = Modifier.testTag("biomax_bottom_nav")
-            ) {
-                // Tab 1: Marketplace
-                NavigationBarItem(
-                    selected = selectedTab == BiomaxNavigationTab.MARKETPLACE,
-                    onClick = { selectedTab = BiomaxNavigationTab.MARKETPLACE },
-                    icon = {
-                        Icon(
-                            imageVector = if (selectedTab == BiomaxNavigationTab.MARKETPLACE) BiomaxNavigationTab.MARKETPLACE.iconFilled else BiomaxNavigationTab.MARKETPLACE.iconOutlined,
-                            contentDescription = "Marketplace"
-                        )
+    // --- Top-Level Authentication & RBAC Router ---
+    if (authState !is AuthState.Authenticated) {
+        LoginScreen(
+            authState = authState,
+            onAuthEvent = { viewModel.handleAuthEvent(it) }
+        )
+    } else {
+        val unreadAlertsCount = alerts.count { !it.isRead }
+
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            gesturesEnabled = true,
+            drawerContent = {
+                BiomaxSidebarDrawer(
+                    user = currentUser,
+                    activeRole = activeRole,
+                    appSettings = appSettings,
+                    unreadAlertsCount = unreadAlertsCount,
+                    currentLanguage = currentLanguage,
+                    currentCurrency = currentCurrency,
+                    onSwitchRole = { newRole ->
+                        viewModel.switchActiveRole(newRole)
+                        selectedTab = 0
+                        coroutineScope.launch { drawerState.close() }
                     },
-                    label = {
-                        Text(
-                            text = if (activeRole == UserRole.BIOGAS_PLANT) LocalizationManager.getString("nav_marketplace", currentLanguage) else "Marketplace",
-                            fontSize = 10.sp
-                        )
+                    onToggleThemeMode = { viewModel.toggleThemeMode() },
+                    onSelectPalette = { viewModel.setThemePalette(it) },
+                    onToggleDynamicColor = { viewModel.setDynamicColor(it) },
+                    onSelectLanguage = { viewModel.setLanguage(it) },
+                    onSelectCurrency = { viewModel.setCurrency(it) },
+                    onOpenCalculator = { showYieldCalcDialog = true },
+                    onOpenSecurity = { showSecuritySheet = true },
+                    onOpenNotifications = { showNotificationsSheet = true },
+                    onOpenSettings = {
+                        selectedTab = 4
+                        coroutineScope.launch { drawerState.close() }
                     },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = BioGreenDark,
-                        selectedTextColor = BioGreenDark,
-                        indicatorColor = BioGreenLight.copy(alpha = 0.35f)
-                    ),
-                    modifier = Modifier.testTag("nav_tab_marketplace")
+                    onLogout = { viewModel.handleAuthEvent(AuthEvent.Logout) },
+                    onCloseDrawer = { coroutineScope.launch { drawerState.close() } }
                 )
+            }
+        ) {
+            Scaffold(
+                topBar = {
+                    BiomaxTopBar(
+                        user = currentUser,
+                        activeRole = activeRole,
+                        unreadAlertsCount = unreadAlertsCount,
+                        onOpenDrawer = {
+                            coroutineScope.launch { drawerState.open() }
+                        },
+                        onQuickSwitchRole = {
+                            val nextRole = if (activeRole == UserRole.RESTAURANT) UserRole.BIOGAS_PLANT else UserRole.RESTAURANT
+                            viewModel.switchActiveRole(nextRole)
+                            selectedTab = 0
+                        }
+                    )
+                },
+                snackbarHost = { SnackbarHost(snackbarHostState) },
+                bottomBar = {
+                    NavigationBar(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 4.dp,
+                        modifier = Modifier.testTag("biomax_bottom_nav")
+                    ) {
+                        if (activeRole == UserRole.RESTAURANT) {
+                            // --- Restaurant Navigation ---
+                            NavigationBarItem(
+                                selected = selectedTab == 0,
+                                onClick = { selectedTab = 0 },
+                                icon = {
+                                    Icon(
+                                        imageVector = if (selectedTab == 0) Icons.Filled.Inventory2 else Icons.Outlined.Inventory2,
+                                        contentDescription = "Kitchen Lots"
+                                    )
+                                },
+                                label = { Text("Lots", fontSize = 10.sp, fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                                ),
+                                modifier = Modifier.testTag("nav_restaurant_lots")
+                            )
 
-                // Tab 2: Restaurant Kitchen Lots
-                NavigationBarItem(
-                    selected = selectedTab == BiomaxNavigationTab.RESTAURANT_LOTS,
-                    onClick = { selectedTab = BiomaxNavigationTab.RESTAURANT_LOTS },
-                    icon = {
-                        Icon(
-                            imageVector = if (selectedTab == BiomaxNavigationTab.RESTAURANT_LOTS) BiomaxNavigationTab.RESTAURANT_LOTS.iconFilled else BiomaxNavigationTab.RESTAURANT_LOTS.iconOutlined,
-                            contentDescription = "Kitchen Lots"
-                        )
-                    },
-                    label = {
-                        Text(
-                            text = "Kitchen Lots",
-                            fontSize = 10.sp
-                        )
-                    },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = BioGreenDark,
-                        selectedTextColor = BioGreenDark,
-                        indicatorColor = BioGreenLight.copy(alpha = 0.35f)
-                    ),
-                    modifier = Modifier.testTag("nav_tab_kitchen_lots")
-                )
+                            NavigationBarItem(
+                                selected = selectedTab == 1,
+                                onClick = { selectedTab = 1 },
+                                icon = {
+                                    BadgedBox(badge = {
+                                        val activePickups = orders.count { it.logisticsStatus != LogisticsStatus.DELIVERED_DIGESTING }
+                                        if (activePickups > 0) {
+                                            Badge(containerColor = MaterialTheme.colorScheme.primary) {
+                                                Text(activePickups.toString(), color = MaterialTheme.colorScheme.onPrimary, fontSize = 9.sp)
+                                            }
+                                        }
+                                    }) {
+                                        Icon(
+                                            imageVector = if (selectedTab == 1) Icons.Filled.LocalShipping else Icons.Outlined.LocalShipping,
+                                            contentDescription = "Fleet Pickups"
+                                        )
+                                    }
+                                },
+                                label = { Text("Pickups", fontSize = 10.sp, fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                                ),
+                                modifier = Modifier.testTag("nav_restaurant_pickups")
+                            )
 
-                // Tab 3: Logistics
-                NavigationBarItem(
-                    selected = selectedTab == BiomaxNavigationTab.LOGISTICS,
-                    onClick = { selectedTab = BiomaxNavigationTab.LOGISTICS },
-                    icon = {
-                        BadgedBox(badge = {
-                            val activeTransitCount = orders.count { it.logisticsStatus != LogisticsStatus.DELIVERED_DIGESTING }
-                            if (activeTransitCount > 0) {
-                                Badge(containerColor = BioGreenPrimary) {
-                                    Text(activeTransitCount.toString(), color = Color.White, fontSize = 9.sp)
+                            NavigationBarItem(
+                                selected = selectedTab == 2,
+                                onClick = { selectedTab = 2 },
+                                icon = {
+                                    Icon(
+                                        imageVector = if (selectedTab == 2) Icons.Filled.BarChart else Icons.Outlined.BarChart,
+                                        contentDescription = "Impact"
+                                    )
+                                },
+                                label = { Text("Impact", fontSize = 10.sp, fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Normal) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                                ),
+                                modifier = Modifier.testTag("nav_restaurant_impact")
+                            )
+
+                            NavigationBarItem(
+                                selected = selectedTab == 3,
+                                onClick = { selectedTab = 3 },
+                                icon = {
+                                    Icon(
+                                        imageVector = if (selectedTab == 3) Icons.Filled.Shield else Icons.Outlined.Shield,
+                                        contentDescription = "Security"
+                                    )
+                                },
+                                label = { Text("Security", fontSize = 10.sp, fontWeight = if (selectedTab == 3) FontWeight.Bold else FontWeight.Normal) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                                ),
+                                modifier = Modifier.testTag("nav_restaurant_security")
+                            )
+
+                            NavigationBarItem(
+                                selected = selectedTab == 4,
+                                onClick = { selectedTab = 4 },
+                                icon = {
+                                    Icon(
+                                        imageVector = if (selectedTab == 4) Icons.Filled.Tune else Icons.Outlined.Tune,
+                                        contentDescription = "Controls"
+                                    )
+                                },
+                                label = { Text("Controls", fontSize = 10.sp, fontWeight = if (selectedTab == 4) FontWeight.Bold else FontWeight.Normal) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                                ),
+                                modifier = Modifier.testTag("nav_restaurant_settings")
+                            )
+                        } else {
+                            // --- Biogas Energy Plant Navigation ---
+                            NavigationBarItem(
+                                selected = selectedTab == 0,
+                                onClick = { selectedTab = 0 },
+                                icon = {
+                                    Icon(
+                                        imageVector = if (selectedTab == 0) Icons.Filled.Storefront else Icons.Outlined.Storefront,
+                                        contentDescription = "Marketplace"
+                                    )
+                                },
+                                label = { Text("Market", fontSize = 10.sp, fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                                ),
+                                modifier = Modifier.testTag("nav_biogas_marketplace")
+                            )
+
+                            NavigationBarItem(
+                                selected = selectedTab == 1,
+                                onClick = { selectedTab = 1 },
+                                icon = {
+                                    BadgedBox(badge = {
+                                        val inTransit = orders.count { it.logisticsStatus != LogisticsStatus.DELIVERED_DIGESTING }
+                                        if (inTransit > 0) {
+                                            Badge(containerColor = MaterialTheme.colorScheme.secondary) {
+                                                Text(inTransit.toString(), color = MaterialTheme.colorScheme.onSecondary, fontSize = 9.sp)
+                                            }
+                                        }
+                                    }) {
+                                        Icon(
+                                            imageVector = if (selectedTab == 1) Icons.Filled.LocalShipping else Icons.Outlined.LocalShipping,
+                                            contentDescription = "Fleet Logistics"
+                                        )
+                                    }
+                                },
+                                label = { Text("Fleet", fontSize = 10.sp, fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                                ),
+                                modifier = Modifier.testTag("nav_biogas_logistics")
+                            )
+
+                            NavigationBarItem(
+                                selected = selectedTab == 2,
+                                onClick = { selectedTab = 2 },
+                                icon = {
+                                    Icon(
+                                        imageVector = if (selectedTab == 2) Icons.Filled.ElectricBolt else Icons.Outlined.ElectricBolt,
+                                        contentDescription = "Power Output"
+                                    )
+                                },
+                                label = { Text("Power", fontSize = 10.sp, fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Normal) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                                ),
+                                modifier = Modifier.testTag("nav_biogas_power")
+                            )
+
+                            NavigationBarItem(
+                                selected = selectedTab == 3,
+                                onClick = { selectedTab = 3 },
+                                icon = {
+                                    Icon(
+                                        imageVector = if (selectedTab == 3) Icons.Filled.Shield else Icons.Outlined.Shield,
+                                        contentDescription = "Security"
+                                    )
+                                },
+                                label = { Text("Security", fontSize = 10.sp, fontWeight = if (selectedTab == 3) FontWeight.Bold else FontWeight.Normal) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                                ),
+                                modifier = Modifier.testTag("nav_biogas_security")
+                            )
+
+                            NavigationBarItem(
+                                selected = selectedTab == 4,
+                                onClick = { selectedTab = 4 },
+                                icon = {
+                                    Icon(
+                                        imageVector = if (selectedTab == 4) Icons.Filled.Tune else Icons.Outlined.Tune,
+                                        contentDescription = "Controls"
+                                    )
+                                },
+                                label = { Text("Controls", fontSize = 10.sp, fontWeight = if (selectedTab == 4) FontWeight.Bold else FontWeight.Normal) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                                ),
+                                modifier = Modifier.testTag("nav_biogas_settings")
+                            )
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
+            ) { innerPadding ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background)
+                        .padding(innerPadding)
+                ) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        // Fluid Glassmorphic Hero Ribbon (shown on overview tabs)
+                        if (selectedTab != 4) {
+                            HeroBanner(
+                                user = currentUser,
+                                activeRole = activeRole,
+                                currentLanguage = currentLanguage,
+                                currentCurrency = currentCurrency
+                            )
+                        }
+
+                        // Screen Routing
+                        if (activeRole == UserRole.RESTAURANT) {
+                            when (selectedTab) {
+                                0 -> {
+                                    RestaurantScreen(
+                                        user = currentUser,
+                                        listings = listings,
+                                        orders = orders,
+                                        currentCurrency = currentCurrency,
+                                        currentLanguage = currentLanguage,
+                                        onOpenPostLot = { showPostLotSheet = true }
+                                    )
+                                }
+                                1 -> {
+                                    LogisticsScreen(
+                                        orders = orders,
+                                        currentCurrency = currentCurrency,
+                                        currentLanguage = currentLanguage,
+                                        onAdvanceStep = { order ->
+                                            viewModel.advanceLogisticsStep(order)
+                                        },
+                                        onSettleEscrow = { order ->
+                                            viewModel.settleOrderEscrow(order)
+                                        },
+                                        onRatePartner = { order ->
+                                            showRatingDialogForOrder = order
+                                        }
+                                    )
+                                }
+                                2 -> {
+                                    AnalyticsDashboardScreen(
+                                        user = currentUser,
+                                        orders = orders,
+                                        reviews = reviews,
+                                        currentCurrency = currentCurrency,
+                                        currentLanguage = currentLanguage
+                                    )
+                                }
+                                3 -> {
+                                    SecurityComplianceScreen(
+                                        user = currentUser,
+                                        auditLogs = auditLogs,
+                                        onOpenMfaChallenge = {
+                                            showSecuritySheet = true
+                                        }
+                                    )
+                                }
+                                4 -> {
+                                    SettingsScreen(
+                                        viewModel = viewModel,
+                                        appSettings = appSettings,
+                                        user = currentUser,
+                                        activeRole = activeRole,
+                                        currentLanguage = currentLanguage,
+                                        currentCurrency = currentCurrency,
+                                        onClose = { selectedTab = 0 }
+                                    )
                                 }
                             }
-                        }) {
-                            Icon(
-                                imageVector = if (selectedTab == BiomaxNavigationTab.LOGISTICS) BiomaxNavigationTab.LOGISTICS.iconFilled else BiomaxNavigationTab.LOGISTICS.iconOutlined,
-                                contentDescription = "Logistics"
-                            )
+                        } else {
+                            when (selectedTab) {
+                                0 -> {
+                                    MarketplaceScreen(
+                                        listings = listings,
+                                        currentCurrency = currentCurrency,
+                                        currentLanguage = currentLanguage,
+                                        searchQuery = searchQuery,
+                                        selectedCategory = selectedCategoryFilter,
+                                        selectedGrade = selectedGradeFilter,
+                                        onSearchChange = { searchQuery = it },
+                                        onCategorySelect = { selectedCategoryFilter = it },
+                                        onGradeSelect = { selectedGradeFilter = it },
+                                        onProcureListing = { listing ->
+                                            viewModel.procureWasteLot(
+                                                listing = listing,
+                                                onCompleted = {
+                                                    selectedTab = 1
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                                1 -> {
+                                    LogisticsScreen(
+                                        orders = orders,
+                                        currentCurrency = currentCurrency,
+                                        currentLanguage = currentLanguage,
+                                        onAdvanceStep = { order ->
+                                            viewModel.advanceLogisticsStep(order)
+                                        },
+                                        onSettleEscrow = { order ->
+                                            viewModel.settleOrderEscrow(order)
+                                        },
+                                        onRatePartner = { order ->
+                                            showRatingDialogForOrder = order
+                                        }
+                                    )
+                                }
+                                2 -> {
+                                    AnalyticsDashboardScreen(
+                                        user = currentUser,
+                                        orders = orders,
+                                        reviews = reviews,
+                                        currentCurrency = currentCurrency,
+                                        currentLanguage = currentLanguage
+                                    )
+                                }
+                                3 -> {
+                                    SecurityComplianceScreen(
+                                        user = currentUser,
+                                        auditLogs = auditLogs,
+                                        onOpenMfaChallenge = {
+                                            showSecuritySheet = true
+                                        }
+                                    )
+                                }
+                                4 -> {
+                                    SettingsScreen(
+                                        viewModel = viewModel,
+                                        appSettings = appSettings,
+                                        user = currentUser,
+                                        activeRole = activeRole,
+                                        currentLanguage = currentLanguage,
+                                        currentCurrency = currentCurrency,
+                                        onClose = { selectedTab = 0 }
+                                    )
+                                }
+                            }
                         }
-                    },
-                    label = {
-                        Text(
-                            text = LocalizationManager.getString("nav_logistics", currentLanguage),
-                            fontSize = 10.sp
-                        )
-                    },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = BioGreenDark,
-                        selectedTextColor = BioGreenDark,
-                        indicatorColor = BioGreenLight.copy(alpha = 0.35f)
-                    ),
-                    modifier = Modifier.testTag("nav_tab_logistics")
-                )
-
-                // Tab 4: Analytics
-                NavigationBarItem(
-                    selected = selectedTab == BiomaxNavigationTab.ANALYTICS,
-                    onClick = { selectedTab = BiomaxNavigationTab.ANALYTICS },
-                    icon = {
-                        Icon(
-                            imageVector = if (selectedTab == BiomaxNavigationTab.ANALYTICS) BiomaxNavigationTab.ANALYTICS.iconFilled else BiomaxNavigationTab.ANALYTICS.iconOutlined,
-                            contentDescription = "Analytics"
-                        )
-                    },
-                    label = {
-                        Text(
-                            text = LocalizationManager.getString("nav_analytics", currentLanguage),
-                            fontSize = 10.sp
-                        )
-                    },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = BioGreenDark,
-                        selectedTextColor = BioGreenDark,
-                        indicatorColor = BioGreenLight.copy(alpha = 0.35f)
-                    ),
-                    modifier = Modifier.testTag("nav_tab_analytics")
-                )
-
-                // Tab 5: Security & Compliance
-                NavigationBarItem(
-                    selected = selectedTab == BiomaxNavigationTab.SECURITY,
-                    onClick = { selectedTab = BiomaxNavigationTab.SECURITY },
-                    icon = {
-                        Icon(
-                            imageVector = if (selectedTab == BiomaxNavigationTab.SECURITY) BiomaxNavigationTab.SECURITY.iconFilled else BiomaxNavigationTab.SECURITY.iconOutlined,
-                            contentDescription = "Security"
-                        )
-                    },
-                    label = {
-                        Text(
-                            text = LocalizationManager.getString("nav_security", currentLanguage),
-                            fontSize = 10.sp
-                        )
-                    },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = BioGreenDark,
-                        selectedTextColor = BioGreenDark,
-                        indicatorColor = BioGreenLight.copy(alpha = 0.35f)
-                    ),
-                    modifier = Modifier.testTag("nav_tab_security")
-                )
-            }
-        },
-        modifier = Modifier.fillMaxSize()
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            // Persistent Brand Hero Banner with Role Switcher & Live KPIs
-            HeroBanner(
-                user = currentUser,
-                activeRole = activeRole,
-                currentLanguage = currentLanguage,
-                currentCurrency = currentCurrency,
-                unreadAlertsCount = unreadAlertsCount,
-                onSwitchRole = { newRole ->
-                    viewModel.switchRole(newRole)
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Switched active view to ${newRole.name.replace("_", " ")}")
                     }
-                },
-                onOpenCalculator = { showYieldCalcDialog = true },
-                onOpenNotifications = { showNotificationsSheet = true },
-                onOpenSecurity = { showSecuritySheet = true },
-                onLanguageChange = { viewModel.setLanguage(it) },
-                onCurrencyChange = { viewModel.setCurrency(it) }
-            )
 
-            // Screen Content Routing
-            when (selectedTab) {
-                BiomaxNavigationTab.MARKETPLACE -> {
-                    MarketplaceScreen(
-                        listings = listings,
-                        currentCurrency = currentCurrency,
-                        currentLanguage = currentLanguage,
-                        searchQuery = searchQuery,
-                        selectedCategory = selectedCategoryFilter,
-                        selectedGrade = selectedGradeFilter,
-                        onSearchChange = { searchQuery = it },
-                        onCategorySelect = { selectedCategoryFilter = it },
-                        onGradeSelect = { selectedGradeFilter = it },
-                        onProcureListing = { listing ->
-                            viewModel.procureWasteLot(
-                                listing = listing,
-                                onCompleted = { order ->
-                                    selectedTab = BiomaxNavigationTab.LOGISTICS
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("Procured ${listing.weightKg.toInt()} kg lot! ${LocalizationManager.formatPrice(order.totalAmount, currentCurrency)} held securely in Escrow.")
-                                    }
-                                }
-                            )
-                        }
-                    )
-                }
-                BiomaxNavigationTab.RESTAURANT_LOTS -> {
-                    RestaurantScreen(
-                        user = currentUser,
-                        listings = listings,
-                        orders = orders,
-                        currentCurrency = currentCurrency,
-                        currentLanguage = currentLanguage,
-                        onOpenPostLot = { showPostLotSheet = true }
-                    )
-                }
-                BiomaxNavigationTab.LOGISTICS -> {
-                    LogisticsScreen(
-                        orders = orders,
-                        currentCurrency = currentCurrency,
-                        currentLanguage = currentLanguage,
-                        onAdvanceStep = { order ->
-                            viewModel.advanceLogisticsStep(
-                                order = order,
-                                onStepAdvanced = { updated ->
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("Order ${updated.id}: Advanced to ${updated.logisticsStatus.label}")
-                                    }
-                                }
-                            )
-                        },
-                        onSettleEscrow = { order ->
-                            viewModel.settleOrderEscrow(
-                                order = order,
-                                onSettled = {
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("Escrow Settled: ${LocalizationManager.formatPrice(order.totalAmount, currentCurrency)} paid out securely.")
-                                    }
-                                }
-                            )
-                        },
-                        onRatePartner = { order ->
-                            showRatingDialogForOrder = order
-                        }
-                    )
-                }
-                BiomaxNavigationTab.ANALYTICS -> {
-                    AnalyticsDashboardScreen(
-                        user = currentUser,
-                        orders = orders,
-                        reviews = reviews,
-                        currentCurrency = currentCurrency,
-                        currentLanguage = currentLanguage
-                    )
-                }
-                BiomaxNavigationTab.SECURITY -> {
-                    SecurityComplianceScreen(
-                        user = currentUser,
-                        auditLogs = auditLogs,
-                        onOpenMfaChallenge = {
-                            mfaErrorMessage = null
-                            mfaInputCode = ""
-                            showMfaDialog = true
-                        }
+                    // Floating Quick Actions Speed Dial Button
+                    BiomaxFloatingMenu(
+                        unreadAlertsCount = unreadAlertsCount,
+                        onOpenCalculator = { showYieldCalcDialog = true },
+                        onOpenNotifications = { showNotificationsSheet = true },
+                        onOpenSecurity = { showSecuritySheet = true },
+                        onToggleTheme = { viewModel.toggleThemeMode() },
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 16.dp, bottom = 16.dp)
                     )
                 }
             }
-        }
 
-        // --- Dialogs & Sheets ---
+            // --- Modal Dialogs & Sheets ---
+            if (showYieldCalcDialog) {
+                YieldCalculatorDialog(
+                    currentCurrency = currentCurrency,
+                    onDismiss = { showYieldCalcDialog = false }
+                )
+            }
 
-        // 1. Yield Calculator Dialog
-        if (showYieldCalcDialog) {
-            YieldCalculatorDialog(
-                currentCurrency = currentCurrency,
-                onDismiss = { showYieldCalcDialog = false }
-            )
-        }
-
-        // 2. Post Waste Lot Bottom Sheet
-        if (showPostLotSheet) {
-            PostLotBottomSheet(
-                currentCurrency = currentCurrency,
-                currentLanguage = currentLanguage,
-                onDismiss = { showPostLotSheet = false },
-                onSubmitListing = { title, category, weightKg, moisture, pricePerKg, isFreePickup, grade, storage, pickupAddress, notes ->
-                    viewModel.createWasteListing(
-                        title = title,
-                        category = category,
-                        weightKg = weightKg,
-                        moisturePercent = moisture,
-                        pricePerKg = pricePerKg,
-                        isFreePickup = isFreePickup,
-                        freshnessGrade = grade,
-                        storageType = storage,
-                        pickupAddress = pickupAddress,
-                        notes = notes
-                    )
-                    showPostLotSheet = false
-                    selectedTab = BiomaxNavigationTab.MARKETPLACE
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Published waste lot successfully to Biomax marketplace!")
+            if (showPostLotSheet) {
+                PostLotBottomSheet(
+                    currentCurrency = currentCurrency,
+                    currentLanguage = currentLanguage,
+                    onDismiss = { showPostLotSheet = false },
+                    onSubmitListing = { title, category, weightKg, moisture, pricePerKg, isFreePickup, grade, storage, pickupAddress, notes ->
+                        viewModel.createWasteListing(
+                            title = title,
+                            category = category,
+                            weightKg = weightKg,
+                            moisturePercent = moisture,
+                            pricePerKg = pricePerKg,
+                            isFreePickup = isFreePickup,
+                            freshnessGrade = grade,
+                            storageType = storage,
+                            pickupAddress = pickupAddress,
+                            notes = notes
+                        )
+                        showPostLotSheet = false
+                        selectedTab = 0
                     }
-                }
-            )
-        }
+                )
+            }
 
-        // 3. Partner Quality Rating Dialog
-        if (showRatingDialogForOrder != null) {
-            val order = showRatingDialogForOrder!!
-            RatingDialog(
-                order = order,
-                onDismiss = { showRatingDialogForOrder = null },
-                onSubmitRating = { overall, purity, moisture, punctuality, comment ->
-                    viewModel.submitPartnerReview(
-                        order = order,
-                        overall = overall,
-                        purity = purity,
-                        moisture = moisture,
-                        punctuality = punctuality,
-                        comment = comment
-                    )
-                    showRatingDialogForOrder = null
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Quality rating submitted and logged to partner reputation ledger.")
+            if (showRatingDialogForOrder != null) {
+                val order = showRatingDialogForOrder!!
+                RatingDialog(
+                    order = order,
+                    onDismiss = { showRatingDialogForOrder = null },
+                    onSubmitRating = { overall, purity, moisture, punctuality, comment ->
+                        viewModel.submitPartnerReview(
+                            order = order,
+                            overall = overall,
+                            purity = purity,
+                            moisture = moisture,
+                            punctuality = punctuality,
+                            comment = comment
+                        )
+                        showRatingDialogForOrder = null
                     }
-                }
-            )
-        }
+                )
+            }
 
-        // 4. MFA Challenge Modal
-        if (showMfaDialog) {
-            MfaDialog(
-                demoCode = demoMfaCode,
-                inputCode = mfaInputCode,
-                errorMessage = mfaErrorMessage,
-                onInputChange = {
-                    mfaInputCode = it
-                    mfaErrorMessage = null
-                },
-                onVerify = {
-                    val verified = viewModel.verifyMfaToken(mfaInputCode)
-                    if (verified) {
-                        showMfaDialog = false
-                        coroutineScope.launch {
-                            snackbarHostState.showSnackbar("Multi-Factor Authentication Verified! FIPS 140-3 Hardware Token Synced.")
-                        }
-                    } else {
-                        mfaErrorMessage = "Invalid 6-digit TOTP code. Please enter the current active code."
-                    }
-                },
-                onDismiss = { showMfaDialog = false }
-            )
-        }
+            if (showSecuritySheet) {
+                SecurityInspectorSheet(
+                    auditLogs = auditLogs,
+                    mfaEnabled = currentUser?.mfaEnabled ?: true,
+                    onToggleMfa = { viewModel.toggleMfa() },
+                    onDismiss = { showSecuritySheet = false }
+                )
+            }
 
-        // 5. Security & Cryptographic Inspector Sheet
-        if (showSecuritySheet) {
-            SecurityInspectorSheet(
-                auditLogs = auditLogs,
-                mfaEnabled = currentUser?.mfaEnabled ?: true,
-                onToggleMfa = {
-                    viewModel.toggleMfa()
-                },
-                onDismiss = { showSecuritySheet = false }
-            )
-        }
-
-        // 6. System Alerts Notifications Sheet
-        if (showNotificationsSheet) {
-            NotificationsSheet(
-                alerts = alerts,
-                onMarkRead = { viewModel.markAlertRead(it) },
-                onMarkAllRead = { viewModel.markAllAlertsRead() },
-                onTriggerSpoilageSim = {
-                    viewModel.simulateUrgentSpoilageAlert()
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Simulated IoT Spoilage Alert dispatched!")
-                    }
-                },
-                onTriggerSurgeSim = {
-                    viewModel.simulateGridSurgeAlert()
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Simulated Biomax Regional Demand Surge Alert dispatched!")
-                    }
-                },
-                onDismiss = { showNotificationsSheet = false }
-            )
+            if (showNotificationsSheet) {
+                NotificationsSheet(
+                    alerts = alerts,
+                    onMarkRead = { viewModel.markAlertRead(it) },
+                    onMarkAllRead = { viewModel.markAllAlertsRead() },
+                    onTriggerSpoilageSim = { viewModel.simulateUrgentSpoilageAlert() },
+                    onTriggerSurgeSim = { viewModel.simulateGridSurgeAlert() },
+                    onDismiss = { showNotificationsSheet = false }
+                )
+            }
         }
     }
 }

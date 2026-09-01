@@ -2,6 +2,7 @@ package com.example.biomax.ui.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,6 +10,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,7 +23,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.biomax.localization.LocalizationManager
 import com.example.biomax.model.*
-import com.example.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -44,245 +45,120 @@ fun AnalyticsDashboardScreen(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 14.dp)
+            .background(MaterialTheme.colorScheme.background)
+            .padding(horizontal = 16.dp)
             .testTag("analytics_dashboard_screen"),
         verticalArrangement = Arrangement.spacedBy(14.dp),
-        contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp)
+        contentPadding = PaddingValues(top = 8.dp, bottom = 96.dp)
     ) {
         // Section: KPI Summary Grid
         item {
             Text(
                 text = "OPERATIONAL & SUSTAINABILITY ANALYTICS",
                 fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                fontWeight = FontWeight.Black,
+                color = MaterialTheme.colorScheme.primary,
+                letterSpacing = 0.8.sp
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     AnalyticsMetricCard(
-                        title = "Feedstock Processed",
-                        value = "${String.format("%.1f", totalTradedTons)} Metric Tons",
+                        title = "Feedstock Ingested",
+                        value = "${String.format("%.1f", totalTradedTons)} Tons",
                         icon = Icons.Default.Recycling,
-                        tint = BioGreenPrimary,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f)
                     )
                     AnalyticsMetricCard(
-                        title = "Clean Renewable Power",
-                        value = "${String.format("%.1f", totalMwh)} MWh Produced",
+                        title = "Renewable Power Output",
+                        value = "${String.format("%.1f", totalMwh)} MWh",
                         icon = Icons.Default.Bolt,
-                        tint = BioAmberEnergy,
+                        tint = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.weight(1f)
                     )
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     AnalyticsMetricCard(
-                        title = "GHG Landfill Avoidance",
-                        value = "${String.format("%.1f", totalCo2AbatedTons)} T CO₂e",
+                        title = "Landfill Methane Avoidance",
+                        value = "${String.format("%.1f", totalCo2AbatedTons)} T CO₂",
                         icon = Icons.Default.Forest,
-                        tint = BioTealAccent,
+                        tint = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.weight(1f)
                     )
                     AnalyticsMetricCard(
-                        title = "Total Escrow Volume",
+                        title = "Escrow Transacted",
                         value = LocalizationManager.formatPrice(totalFinancialVolume, currentCurrency),
                         icon = Icons.Default.AccountBalanceWallet,
-                        tint = StatusSettled,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f)
                     )
                 }
             }
         }
 
-        // Section: Feedstock Breakdown Chart / Visualizer
+        // Section: Energy Conversion Breakdown
         item {
             Card(
-                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
-                modifier = Modifier.fillMaxWidth()
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Feedstock Composition & Biogas Yield",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
-                        )
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = BioGreenDark.copy(alpha = 0.15f)
-                        ) {
-                            Text(
-                                "Avg: 220 m³ CH₄/T",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = BioGreenDark,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    // Feedstock distribution bars
-                    FeedstockProgressBar(name = "Cooked Kitchen Scraps", pct = 0.42f, yield = "180 m³/T", color = BioGreenPrimary)
-                    FeedstockProgressBar(name = "Used Fryer Grease & Lipids", pct = 0.28f, yield = "520 m³/T", color = BioAmberEnergy)
-                    FeedstockProgressBar(name = "Brewery Mash & Spent Grains", pct = 0.18f, yield = "210 m³/T", color = BioTealAccent)
-                    FeedstockProgressBar(name = "Bakery Flour & Produce Trim", pct = 0.12f, yield = "110 m³/T", color = Color(0xFF8B5CF6))
-                }
-            }
-        }
-
-        // Section: Comprehensive Transaction History
-        item {
-            Text(
-                text = "FINANCIAL SETTLEMENT & TRANSACTION HISTORY (${orders.size})",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        items(orders) { order ->
-            Card(
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = order.id,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp
-                            )
-                            Text(
-                                text = "${order.restaurantName} → ${order.biogasPlantName}",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                text = LocalizationManager.formatPrice(order.totalAmount, currentCurrency),
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 14.sp,
-                                color = if (order.paymentStatus == PaymentStatus.SETTLED) StatusSettled else StatusInEscrow
-                            )
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = if (order.paymentStatus == PaymentStatus.SETTLED) StatusSettled.copy(alpha = 0.15f) else StatusInEscrow.copy(alpha = 0.15f)
-                            ) {
-                                Text(
-                                    text = order.paymentStatus.label,
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (order.paymentStatus == PaymentStatus.SETTLED) StatusSettled else StatusInEscrow,
-                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "Batch: ${order.weightKg.toInt()} kg (${order.feedstockCategory.displayName})",
-                            fontSize = 10.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "Gateway: ${order.paymentMethod.label}",
-                            fontSize = 10.sp,
-                            color = BioTealAccent
-                        )
-                    }
-                }
-            }
-        }
-
-        // Section: Quality Reviews & Rating Ledger
-        item {
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "PARTNER QUALITY REVIEWS & RATINGS (${reviews.size})",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        items(reviews) { review ->
-            Card(
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "From: ${review.fromUserName}",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp
-                            )
-                            Text(
-                                text = "To: ${review.toUserName}",
-                                fontSize = 10.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            for (i in 1..5) {
-                                Icon(
-                                    imageVector = Icons.Default.Star,
-                                    contentDescription = null,
-                                    tint = if (i <= review.overallRating) BioAmberEnergy else MaterialTheme.colorScheme.outline,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("${review.overallRating}.0", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(4.dp))
+                Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "“${review.comment}”",
-                        fontSize = 11.sp,
-                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                        text = "Anaerobic Digestion Conversion Efficiency",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
+                    Text(
+                        text = "Continuous biogas turbine output & methane yields by category",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
 
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Purity: ${review.purityScore}/5", fontSize = 9.sp, color = BioGreenDark, fontWeight = FontWeight.Bold)
-                        Text("Moisture Acc: ${review.moistureAccuracyScore}/5", fontSize = 9.sp, color = BioTealAccent, fontWeight = FontWeight.Bold)
-                        Text("Punctuality: ${review.punctualityScore}/5", fontSize = 9.sp, color = BioAmberEnergy, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    FeedstockProgressRow("Used Cooking Oils & Lipids", 0.88f, "520 m³/T (High CH₄)", MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    FeedstockProgressRow("Bakery Flour & Pastry Scraps", 0.65f, "240 m³/T (Rapid digest)", MaterialTheme.colorScheme.secondary)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    FeedstockProgressRow("Cooked Food Scraps", 0.52f, "180 m³/T (Balanced)", MaterialTheme.colorScheme.tertiary)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    FeedstockProgressRow("Brewery Spent Grains", 0.60f, "210 m³/T (High protein)", MaterialTheme.colorScheme.primary)
+                }
+            }
+        }
+
+        // Section: Partner Quality Ratings & Reviews
+        item {
+            Text(
+                text = "VERIFIED PARTNER REVIEWS (${reviews.size})",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Black,
+                color = MaterialTheme.colorScheme.primary,
+                letterSpacing = 0.8.sp
+            )
+        }
+
+        if (reviews.isEmpty()) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Box(modifier = Modifier.padding(20.dp), contentAlignment = Alignment.Center) {
+                        Text("No verified reviews recorded yet.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                     }
                 }
+            }
+        } else {
+            items(reviews, key = { it.id }) { review ->
+                PartnerReviewCard(review = review, dateFormat = dateFormat)
             }
         }
     }
@@ -296,52 +172,144 @@ private fun AnalyticsMetricCard(
     tint: Color,
     modifier: Modifier = Modifier
 ) {
-    Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+    Box(
         modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
+            .padding(14.dp)
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Surface(
-                shape = CircleShape,
-                color = tint.copy(alpha = 0.15f),
-                modifier = Modifier.size(28.dp)
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.padding(5.dp))
+                Text(
+                    text = title,
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Bold
+                )
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = tint,
+                    modifier = Modifier.size(16.dp)
+                )
             }
             Spacer(modifier = Modifier.height(6.dp))
-            Text(title, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(value, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+            Text(
+                text = value,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Black,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }
 
 @Composable
-private fun FeedstockProgressBar(
-    name: String,
-    pct: Float,
-    yield: String,
+private fun FeedstockProgressRow(
+    category: String,
+    fraction: Float,
+    yieldNote: String,
     color: Color
 ) {
-    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+    Column {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(name, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-            Text("${(pct * 100).toInt()}% ($yield)", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = color)
+            Text(category, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Medium)
+            Text(yieldNote, fontSize = 10.sp, color = color, fontWeight = FontWeight.Bold)
         }
-        Spacer(modifier = Modifier.height(3.dp))
+        Spacer(modifier = Modifier.height(4.dp))
         LinearProgressIndicator(
-            progress = { pct },
+            progress = { fraction },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(6.dp)
                 .clip(RoundedCornerShape(3.dp)),
             color = color,
             trackColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun PartnerReviewCard(
+    review: PartnerReview,
+    dateFormat: SimpleDateFormat
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "${review.fromUserName} → ${review.toUserName}",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = dateFormat.format(Date(review.createdAt)),
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    repeat(review.overallRating) {
+                        Icon(Icons.Filled.Star, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(14.dp))
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "\"${review.comment}\"",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ScoreBadge("Purity", review.purityScore)
+                ScoreBadge("Moisture Accuracy", review.moistureAccuracyScore)
+                ScoreBadge("Punctuality", review.punctualityScore)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ScoreBadge(label: String, score: Int) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(horizontal = 6.dp, vertical = 2.dp)
+    ) {
+        Text(
+            text = "$label: $score/5",
+            fontSize = 9.sp,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.SemiBold
         )
     }
 }

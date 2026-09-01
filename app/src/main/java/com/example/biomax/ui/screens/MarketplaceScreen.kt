@@ -1,5 +1,6 @@
 package com.example.biomax.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -8,19 +9,20 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.biomax.localization.LocalizationManager
 import com.example.biomax.model.*
 import com.example.biomax.ui.components.FeedstockListingCard
-import com.example.ui.theme.*
+import com.example.biomax.ui.components.GlassmorphicSurface
 
 @Composable
 fun MarketplaceScreen(
@@ -53,44 +55,50 @@ fun MarketplaceScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .testTag("marketplace_screen")
     ) {
-        // Search bar
+        // Minimal Search Input
         OutlinedTextField(
             value = searchQuery,
             onValueChange = onSearchChange,
-            placeholder = { Text("Search waste food batches, bakery, grease, grains...", fontSize = 12.sp) },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = BioGreenDark) },
+            placeholder = { Text("Search waste lots, grains, oils...", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)) },
             trailingIcon = {
                 if (searchQuery.isNotEmpty()) {
                     IconButton(onClick = { onSearchChange("") }) {
-                        Icon(Icons.Default.Clear, contentDescription = "Clear search")
+                        Icon(Icons.Default.Clear, contentDescription = "Clear", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
                     }
                 }
             },
             singleLine = true,
             shape = RoundedCornerShape(14.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+            ),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 14.dp, vertical = 6.dp)
                 .testTag("marketplace_search_input")
         )
 
-        // Category Filter Chips
+        // Fluid Category Filter Pills
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 14.dp, vertical = 4.dp),
+                .padding(horizontal = 14.dp, vertical = 2.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             FilterChip(
                 selected = selectedCategory == null,
                 onClick = { onCategorySelect(null) },
-                label = { Text("All Feedstocks", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                label = { Text("All Feedstock", fontSize = 10.5.sp, fontWeight = FontWeight.Bold) },
+                shape = RoundedCornerShape(20.dp),
                 colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = BioGreenDark,
-                    selectedLabelColor = Color.White
+                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             )
 
@@ -98,89 +106,82 @@ fun MarketplaceScreen(
                 FilterChip(
                     selected = selectedCategory == cat,
                     onClick = { onCategorySelect(if (selectedCategory == cat) null else cat) },
-                    label = { Text(cat.displayName, fontSize = 11.sp) },
+                    label = { Text(cat.displayName, fontSize = 10.5.sp) },
+                    shape = RoundedCornerShape(20.dp),
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = BioGreenDark,
-                        selectedLabelColor = Color.White
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 )
             }
         }
 
-        // Freshness Grade Quick Filter
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically
+        // Listings Stream
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text(
-                text = "Grade:",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            FreshnessGrade.values().forEach { grade ->
-                AssistChip(
-                    onClick = { onGradeSelect(if (selectedGrade == grade) null else grade) },
-                    label = { Text(grade.name.replace("_", " "), fontSize = 10.sp) },
-                    colors = AssistChipDefaults.assistChipColors(
-                        containerColor = if (selectedGrade == grade) BioGreenPrimary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                    ),
-                    border = AssistChipDefaults.assistChipBorder(
-                        enabled = true,
-                        borderColor = if (selectedGrade == grade) BioGreenPrimary else Color.Transparent
-                    )
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        // Listings List
-        if (filteredListings.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(32.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Default.FilterListOff,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        text = "No matching feedstock listings",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
+                        text = "AVAILABLE LOTS (${filteredListings.size})",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.primary,
+                        letterSpacing = 0.8.sp
                     )
                     Text(
-                        text = "Try clearing your filters or search terms",
-                        fontSize = 12.sp,
+                        text = "Real-time dispatch",
+                        fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(top = 6.dp, bottom = 80.dp)
-            ) {
+
+            if (filteredListings.isEmpty()) {
+                item {
+                    GlassmorphicSurface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(28.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                Icons.Outlined.SearchOff,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(36.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "No matching organic feedstock lots",
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontSize = 13.sp
+                            )
+                            Text(
+                                text = "Try adjusting your search keywords or filters",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                }
+            } else {
                 items(filteredListings, key = { it.id }) { listing ->
                     FeedstockListingCard(
                         listing = listing,
                         currentCurrency = currentCurrency,
-                        currentLanguage = currentLanguage,
-                        onProcureClick = { onProcureListing(listing) }
+                        onProcure = { onProcureListing(listing) }
                     )
                 }
             }
