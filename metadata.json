@@ -1,0 +1,6 @@
+{
+  "name": "Biomax",
+  "description": "Quick-commerce circular economy platform connecting restaurants and biogas plants for organic food waste trading, real-time logistics tracking, secure financial escrow settlements, analytics, and quality ratings.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
